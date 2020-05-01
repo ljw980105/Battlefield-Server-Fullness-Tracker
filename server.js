@@ -7,6 +7,7 @@ var express = require('express'),
     bodyParser = require('body-parser'),
     fs = require('fs'),
     use_https = require('https');
+import PushNotifications from 'node-pushnotifications';
 
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
@@ -42,6 +43,35 @@ app.post('/api/add_device_id', (req, res) => {
             message: err ? err.message : "Success"
         });
     });
+});
+
+const settings = {
+    apn: {
+        token: {
+            key: config.apns_key, // optionally: fs.readFileSync('./certs/key.p8')
+            keyId: config.apns_keyId,
+            teamId: config.apns_teamId
+        },
+        production: false // true for APN production environment, false for APN sandbox environment,
+    }
+}
+
+const push = new PushNotifications(settings);
+
+app.get('/api/push', (req, res) => {
+    DeviceID.find({}, (err, ids) => {
+        var new_ids = ids.map(id => id.id);
+        let data = {
+            topic: "push notification"
+        };
+        push.send(new_ids, data, (err, result) => {
+            if (err) {
+                res.send(err);
+            } else {
+                res.json(result);
+            }
+        });
+    })
 });
 
 use_https.createServer(ssl_creds, app).listen(port, function () {
