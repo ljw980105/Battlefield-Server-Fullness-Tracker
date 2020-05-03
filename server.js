@@ -94,34 +94,26 @@ const settings = {
 
 const push = new PushNotifications(settings);
 
-app.get('/api/push', (req, res) => {
-    BattlefieldServer.find({}, (err, servers) => {
-        if (servers.length > 0) {
-            DeviceID.find({}, (err, ids) => {
-                var new_ids = ids.map(id => id.id);
-                let data = {
-                    body: "hello",
-                    topic: config.apns_topic
-                };
-                push.send(new_ids, data, (err, result) => {
-                    if (err) {
-                        res.send(err);
-                    } else {
-                        res.json(result);
-                    }
-                });
-            })
-        }
-    });
-});
-
 setInterval(() => {
     BattlefieldServer.find({}, (err, servers) => {
-        const promises = servers.map(server => promisesFromDBObject(server));
-        Promise.all(promises)
-            .then(responses => {
-               console.log(responses);
-            });
+        DeviceID.find({}, (err, ids) => {
+            var device_ids = ids.map(id => id.id);
+            const promises = servers.map(server => promisesFromDBObject(server));
+            Promise.all(promises)
+                .then(responses => {
+                    responses.forEach((s, i) => {
+                        let total = parseInt(s.slots["2"].max);
+                        let current = parseInt(s.slots["2"].current);
+                        if (current/total > 0.5) {
+                            //send notifications
+                            push.send(device_ids, {
+                                body: `Server ${servers[i].name} is populated with ${current} players`,
+                                topic: config.apns_topic
+                            });
+                        }
+                    });
+                });
+        })
     });
 }, 10000);
 
