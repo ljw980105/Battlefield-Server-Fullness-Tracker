@@ -16,6 +16,7 @@ app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 mongoose.Promise = global.Promise;
 mongoose.connect(`mongodb://localhost:27017/`);
+var muted = false;
 
 const config = JSON.parse(fs.readFileSync("config.json"));
 
@@ -81,6 +82,16 @@ app.get('/api/get_servers', (req, res) => {
     });
 });
 
+app.get('/api/mute', (req, res) => {
+    muted = true;
+    res.send({success: "true", message: "muted successfully"});
+});
+
+app.get('/api/unmute', (req, res) => {
+    muted = false;
+    res.send({success: "true", message: "unmuted successfully"});
+});
+
 const settings = {
     apn: {
         token: {
@@ -95,6 +106,7 @@ const settings = {
 const push = new PushNotifications(settings);
 
 setInterval(() => {
+    if (muted) return;
     BattlefieldServer.find({}, (err, servers) => {
         DeviceID.find({}, (err, ids) => {
             var device_ids = ids.map(id => id.id);
@@ -107,7 +119,7 @@ setInterval(() => {
                         if (current/total > 0.5) {
                             //send notifications
                             push.send(device_ids, {
-                                body: `Server ${servers[i].name} is populated with ${current} players`,
+                                body: `${servers[i].game} server ${servers[i].name} is populated with ${current} players`,
                                 topic: config.apns_topic
                             });
                         }
@@ -115,7 +127,7 @@ setInterval(() => {
                 });
         })
     });
-}, 10000);
+}, 600000);
 
 use_https.createServer(ssl_creds, app).listen(port, function () {
     console.log('HTTPS server up on *:4200');
