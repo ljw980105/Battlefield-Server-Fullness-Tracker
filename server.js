@@ -9,7 +9,8 @@ var express = require('express'),
     bodyParser = require('body-parser'),
     fs = require('fs'),
     use_https = require('https'),
-    PushNotifications = require('node-pushnotifications');
+    PushNotifications = require('node-pushnotifications'),
+    promisesFromDBObject = require('./BattlefieldAPI');
 
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
@@ -70,6 +71,16 @@ app.post('/api/add_server', (req, res) => {
     });
 });
 
+app.get('/api/get_servers', (req, res) => {
+    BattlefieldServer.find({}, (err, servers) => {
+        if(err) {
+            res.send(err);
+        } else {
+            res.json(servers)
+        }
+    });
+});
+
 const settings = {
     apn: {
         token: {
@@ -101,8 +112,18 @@ app.get('/api/push', (req, res) => {
                 });
             })
         }
-    })
+    });
 });
+
+setInterval(() => {
+    BattlefieldServer.find({}, (err, servers) => {
+        const promises = servers.map(server => promisesFromDBObject(server));
+        Promise.all(promises)
+            .then(responses => {
+               console.log(responses);
+            });
+    });
+}, 10000);
 
 use_https.createServer(ssl_creds, app).listen(port, function () {
     console.log('HTTPS server up on *:4200');
