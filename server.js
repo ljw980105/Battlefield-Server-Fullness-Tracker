@@ -84,12 +84,16 @@ app.get('/api/get_servers', (req, res) => {
 
 app.get('/api/mute', (req, res) => {
     muted = true;
-    res.send({success: "true", message: "muted successfully"});
+    res.send({success: true, message: "muted successfully"});
 });
 
 app.get('/api/unmute', (req, res) => {
     muted = false;
-    res.send({success: "true", message: "unmuted successfully"});
+    res.send({success: true, message: "unmuted successfully"});
+});
+
+app.get('/api/is_muted', (req, res) => {
+    res.send({muted: muted, message: "mute status checked successfully"});
 });
 
 const settings = {
@@ -119,7 +123,7 @@ setInterval(() => {
                         if (current/total > 0.5) {
                             //send notifications
                             push.send(device_ids, {
-                                body: `${servers[i].game} server ${servers[i].name} is populated with ${current} players`,
+                                body: `${servers[i].game} server ${servers[i].name} is populated with ${current} players, ${servers[i].id}`,
                                 topic: config.apns_topic
                             });
                         }
